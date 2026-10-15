@@ -14,9 +14,11 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-
 import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
 import HeaderDis from "../../components/layout/HeaderDis";
+
+type TipoRecaudo = "DIGITAL" | "EFECTIVO" | "MICROCREDITO";
+type FiltroPago = "TODOS" | TipoRecaudo;
 
 interface RegistroConciliacion {
   id: number;
@@ -37,6 +39,7 @@ interface RegistroConciliacion {
   placa: string;
   transportista: string;
   ruta: string;
+  tipoRecaudo: TipoRecaudo;
 }
 
 const datosDemo: RegistroConciliacion[] = [
@@ -59,6 +62,7 @@ const datosDemo: RegistroConciliacion[] = [
     placa: "ABC123",
     transportista: "3001234567",
     ruta: "Ruta Norte",
+    tipoRecaudo: "DIGITAL",
   },
   {
     id: 2,
@@ -79,6 +83,7 @@ const datosDemo: RegistroConciliacion[] = [
     placa: "ABC123",
     transportista: "3001234567",
     ruta: "Ruta Norte",
+    tipoRecaudo: "EFECTIVO",
   },
   {
     id: 3,
@@ -99,6 +104,7 @@ const datosDemo: RegistroConciliacion[] = [
     placa: "XYZ789",
     transportista: "3109876543",
     ruta: "Ruta Sur",
+    tipoRecaudo: "DIGITAL",
   },
   {
     id: 4,
@@ -119,24 +125,30 @@ const datosDemo: RegistroConciliacion[] = [
     placa: "DEF456",
     transportista: "3155555555",
     ruta: "Ruta Centro",
+    tipoRecaudo: "EFECTIVO",
+  },
+  {
+    id: 5,
+    recaudo: 95000,
+    codigo: "FAC-1005",
+    fecha: "29/09/2026",
+    hora: "12:15:00",
+    clienteId: "8100009826",
+    cedula: "1001001005",
+    nombres: "Pedro",
+    apellidos: "Ramírez",
+    comercio: "Tienda El Progreso",
+    departamento: "Valle del Cauca",
+    ciudad: "Cali",
+    empresa: "SURTIALIMENTOS",
+    codigoProducto: "PL-004",
+    cantidad: 1,
+    placa: "DEF456",
+    transportista: "3155555555",
+    ruta: "Ruta Centro",
+    tipoRecaudo: "MICROCREDITO",
   },
 ];
-
-const formatearMiles = (numero: number) => {
-  return new Intl.NumberFormat("es-CO", {
-    maximumFractionDigits: 0,
-  }).format(Number(numero || 0));
-};
-
-const formatearFecha = (fecha: string) => {
-  if (!fecha) {
-    return "";
-  }
-
-  const [dia, mes, ano] = fecha.split("/");
-
-  return `${ano}-${mes}-${dia}`;
-};
 
 interface ResumenDiario {
   fecha: string;
@@ -144,30 +156,45 @@ interface ResumenDiario {
   registros: RegistroConciliacion[];
 }
 
+const formatearMiles = (numero: number) =>
+  new Intl.NumberFormat("es-CO", {
+    maximumFractionDigits: 0,
+  }).format(Number(numero || 0));
+
+const formatearFecha = (fecha: string) => {
+  if (!fecha) return "";
+  const [dia, mes, ano] = fecha.split("/");
+  return `${ano}-${mes}-${dia}`;
+};
+
 function ConciliacionMensual() {
   const navigate = useNavigate();
 
-  const [mesAnoSeleccionado, setMesAnoSeleccionado] =
-    useState("");
-
+  const [mesAnoSeleccionado, setMesAnoSeleccionado] = useState("");
   const [distribuidorSeleccionado, setDistribuidorSeleccionado] =
     useState("");
+  const [tipoPagoSeleccionado, setTipoPagoSeleccionado] =
+    useState<FiltroPago>("TODOS");
 
   const filas = useMemo<ResumenDiario[]>(() => {
-    if (!mesAnoSeleccionado) {
+    if (!mesAnoSeleccionado || !distribuidorSeleccionado) {
       return [];
     }
 
-    const registrosMes = datosDemo.filter((fila) => {
+    const registrosFiltrados = datosDemo.filter((fila) => {
       const [, mes, ano] = fila.fecha.split("/");
 
-      return (
-        `${ano}-${mes}` === mesAnoSeleccionado &&
-        fila.empresa === distribuidorSeleccionado
-      );
+      const coincideMes = `${ano}-${mes}` === mesAnoSeleccionado;
+      const coincideDistribuidor =
+        fila.empresa === distribuidorSeleccionado;
+      const coincidePago =
+        tipoPagoSeleccionado === "TODOS" ||
+        fila.tipoRecaudo === tipoPagoSeleccionado;
+
+      return coincideMes && coincideDistribuidor && coincidePago;
     });
 
-    const agrupados = registrosMes.reduce<
+    const agrupados = registrosFiltrados.reduce<
       Record<string, ResumenDiario>
     >((acumulado, fila) => {
       if (!acumulado[fila.fecha]) {
@@ -184,13 +211,19 @@ function ConciliacionMensual() {
       return acumulado;
     }, {});
 
-    return Object.values(agrupados).sort((a, b) => {
-      const fechaA = formatearFecha(a.fecha);
-      const fechaB = formatearFecha(b.fecha);
+    return Object.values(agrupados).sort((a, b) =>
+      formatearFecha(b.fecha).localeCompare(formatearFecha(a.fecha))
+    );
+  }, [
+    mesAnoSeleccionado,
+    distribuidorSeleccionado,
+    tipoPagoSeleccionado,
+  ]);
 
-      return fechaB.localeCompare(fechaA);
-    });
-  }, [mesAnoSeleccionado, distribuidorSeleccionado]);
+  const totalFiltrado = useMemo(
+    () => filas.reduce((total, fila) => total + fila.recaudo, 0),
+    [filas]
+  );
 
   const verDetalle = (fila: ResumenDiario) => {
     const primerRegistro = fila.registros[0];
@@ -201,6 +234,7 @@ function ConciliacionMensual() {
         fecha: fila.fecha,
         recaudo: fila.recaudo,
         distribuidor: distribuidorSeleccionado,
+        tipoPago: tipoPagoSeleccionado,
         codigo: primerRegistro?.codigo || "N/A",
         hora: primerRegistro?.hora || "N/A",
         clienteId: primerRegistro?.clienteId || "N/A",
@@ -224,342 +258,219 @@ function ConciliacionMensual() {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        width: "100%",
-        bgcolor: "#fff",
-        display: "flex",
-        flexDirection: "column",
-        overflowX: "hidden",
-      }}
-    >
+    <Box sx={{ minHeight: "100vh", width: "100%", bgcolor: "#fff" }}>
       <HeaderDis />
 
       <Box
         component="main"
-        sx={{
-          width: "100%",
-          px: {
-            xs: 1.5,
-            sm: 2,
-            md: 2.5,
-          },
-          py: {
-            xs: 2,
-            sm: 3,
-          },
-          boxSizing: "border-box",
-        }}
+        sx={{ width: "100%", px: { xs: 1.5, sm: 2, md: 2.5 }, py: 3, boxSizing: "border-box" }}
       >
+        <Typography
+          component="h1"
+          sx={{ fontSize: 24, fontWeight: 800, color: "#000", mb: 3 }}
+        >
+          Conciliación Mensual
+        </Typography>
+
         <Box
           sx={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 2,
+            mb: 3,
             width: "100%",
-            maxWidth: "100%",
+            flexWrap: "wrap",
           }}
         >
-          <Typography
-            component="h1"
-            sx={{
-              fontSize: 24,
-              fontWeight: 800,
-              color: "#000",
-              mb: 3,
-            }}
-          >
-            Conciliación Mensual
-          </Typography>
+          <TextField
+            label="Mes y Año"
+            type="month"
+            value={mesAnoSeleccionado}
+            onChange={(event) => setMesAnoSeleccionado(event.target.value)}
+            size="small"
+            slotProps={{ inputLabel: { shrink: true } }}
+            sx={{ width: { xs: "100%", sm: 200 } }}
+          />
 
-          {/* Filtros: mes y distribuidor */}
-          <Box
+          <TextField
+            select
+            label="Distribuidor"
+            value={distribuidorSeleccionado}
+            onChange={(event) => setDistribuidorSeleccionado(event.target.value)}
+            size="small"
+            sx={{ width: { xs: "100%", sm: 220 } }}
+          >
+            <MenuItem value="SURTIALIMENTOS">SURTIALIMENTOS</MenuItem>
+            <MenuItem value="SUPER80">SUPER80</MenuItem>
+          </TextField>
+
+          <TextField
+            select
+            label="Tipo de pago"
+            value={tipoPagoSeleccionado}
+            onChange={(event) =>
+              setTipoPagoSeleccionado(event.target.value as FiltroPago)
+            }
+            size="small"
+            sx={{ width: { xs: "100%", sm: 230 } }}
+          >
+            <MenuItem value="TODOS">Todos</MenuItem>
+            <MenuItem value="DIGITAL">Pagos digitales</MenuItem>
+            <MenuItem value="EFECTIVO">Pagos en efectivo</MenuItem>
+            <MenuItem value="MICROCREDITO">Pagos microcrédito</MenuItem>
+          </TextField>
+        </Box>
+
+        {!mesAnoSeleccionado && (
+          <Paper
+            elevation={0}
             sx={{
+              minHeight: 150,
               display: "flex",
-              alignItems: "flex-start",
-              gap: 2,
-              mb: 3,
-              width: "100%",
-              flexWrap: "wrap",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 1,
+              border: "1px solid #f1f5f9",
+              borderRadius: 2,
             }}
           >
-            <TextField
-              label="Mes y Año"
-              type="month"
-              value={mesAnoSeleccionado}
-              onChange={(event) =>
-                setMesAnoSeleccionado(event.target.value)
-              }
-              size="small"
-              slotProps={{
-                inputLabel: {
-                  shrink: true,
-                },
-                htmlInput: {
-                  "aria-label": "Mes y Año",
-                },
-              }}
-              sx={{
-                width: 220,
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: "6px",
-                  bgcolor: "#fff",
-                },
-                "& .MuiInputBase-input": {
-                  fontSize: 14,
-                  color: "#374151",
-                },
-                "& .MuiInputLabel-root": {
-                  fontSize: 13,
-                },
-              }}
-            />
+            <CalendarMonthOutlinedIcon sx={{ color: "#9ca3af" }} />
+            <Typography sx={{ color: "#9ca3af", fontSize: 14 }}>
+              Seleccione un mes y un año
+            </Typography>
+          </Paper>
+        )}
 
-            <TextField
-              select
-              label="Distribuidor"
-              value={distribuidorSeleccionado}
-              onChange={(event) =>
-                setDistribuidorSeleccionado(event.target.value)
-              }
-              size="small"
-              sx={{
-                width: 220,
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: "6px",
-                  bgcolor: "#fff",
-                },
-                "& .MuiInputBase-input": {
-                  fontSize: 14,
-                  color: "#374151",
-                },
-                "& .MuiInputLabel-root": {
-                  fontSize: 13,
-                },
-              }}
-            >
-              <MenuItem value="SURTIALIMENTOS">
-                SURTIALIMENTOS
-              </MenuItem>
+        {mesAnoSeleccionado && !distribuidorSeleccionado && (
+          <Paper
+            elevation={0}
+            sx={{
+              minHeight: 120,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "1px solid #f1f5f9",
+              borderRadius: 2,
+            }}
+          >
+            <Typography sx={{ color: "#9ca3af", fontSize: 14 }}>
+              Seleccione un distribuidor.
+            </Typography>
+          </Paper>
+        )}
 
-              <MenuItem value="SUPER80">
-                SUPER80
-              </MenuItem>
-            </TextField>
-          </Box>
+        {mesAnoSeleccionado && distribuidorSeleccionado && filas.length === 0 && (
+          <Paper
+            elevation={0}
+            sx={{
+              minHeight: 120,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "1px solid #f1f5f9",
+              borderRadius: 2,
+              p: 2,
+            }}
+          >
+            <Typography sx={{ color: "#9ca3af", fontSize: 14, textAlign: "center" }}>
+              No hay datos para el mes, distribuidor y tipo de pago seleccionados.
+            </Typography>
+          </Paper>
+        )}
 
-          {/* Estado inicial */}
-          {!mesAnoSeleccionado && (
+        {mesAnoSeleccionado && distribuidorSeleccionado && filas.length > 0 && (
+          <>
             <Paper
               elevation={0}
               sx={{
-                width: "100%",
-                minHeight: 150,
                 display: "flex",
+                justifyContent: "space-between",
                 alignItems: "center",
-                justifyContent: "center",
-                gap: 1,
-                border: "1px solid #f1f5f9",
-                borderRadius: "8px",
-                bgcolor: "#fff",
+                gap: 2,
+                flexWrap: "wrap",
+                p: 2,
+                mb: 2,
+                border: "1px solid #e5e7eb",
+                borderRadius: 2,
               }}
             >
-              <CalendarMonthOutlinedIcon
-                sx={{
-                  color: "#9ca3af",
-                  fontSize: 22,
-                }}
-              />
+              <Box>
+                <Typography sx={{ fontSize: 13, color: "#6b7280" }}>
+                  Total recaudado
+                </Typography>
+                <Typography sx={{ fontSize: 26, fontWeight: 800, color: "#111827" }}>
+                  $ {formatearMiles(totalFiltrado)}
+                </Typography>
+              </Box>
 
-              <Typography
-                sx={{
-                  color: "#9ca3af",
-                  fontSize: 14,
-                }}
-              >
-                Seleccione un mes y un año
+              <Typography sx={{ fontSize: 13, color: "#6b7280" }}>
+                {tipoPagoSeleccionado === "TODOS"
+                  ? "Todos los pagos"
+                  : tipoPagoSeleccionado === "DIGITAL"
+                    ? "Pagos digitales"
+                    : tipoPagoSeleccionado === "EFECTIVO"
+                      ? "Pagos en efectivo"
+                      : "Pagos microcrédito"}
               </Typography>
             </Paper>
-          )}
 
-          {/* Sin registros para el filtro */}
-          {mesAnoSeleccionado && filas.length === 0 && (
-            <Paper
-              elevation={0}
-              sx={{
-                width: "100%",
-                minHeight: 120,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                border: "1px solid #f1f5f9",
-                borderRadius: "8px",
-                bgcolor: "#fff",
-              }}
-            >
-              <Typography
-                sx={{
-                  color: "#9ca3af",
-                  fontSize: 14,
-                  textAlign: "center",
-                  px: 2,
-                }}
-              >
-                No hay datos para el distribuidor y mes seleccionados.
-              </Typography>
-            </Paper>
-          )}
-
-          {/* Tabla de conciliación */}
-          {mesAnoSeleccionado && filas.length > 0 && (
             <TableContainer
               component={Paper}
               elevation={0}
-              sx={{
-                width: "100%",
-                borderRadius: "8px",
-                overflowX: "auto",
-                border: "1px solid #f1f5f9",
-              }}
+              sx={{ width: "100%", borderRadius: 2, overflowX: "auto", border: "1px solid #f1f5f9" }}
             >
-              <Table
-                sx={{
-                  width: "100%",
-                  minWidth: 700,
-                  borderCollapse: "collapse",
-                }}
-              >
+              <Table sx={{ minWidth: 650 }}>
                 <TableHead>
                   <TableRow>
-                    <TableCell
-                      sx={{
-                        width: "35%",
-                        backgroundColor: "#f8fafc",
-                        color: "#374151",
-                        fontSize: "13px",
-                        fontWeight: 700,
-                        padding: "12px 16px",
-                        borderBottom: "2px solid #e2e8f0",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      Fecha
-                    </TableCell>
-
-                    <TableCell
-                      sx={{
-                        width: "35%",
-                        backgroundColor: "#f8fafc",
-                        color: "#374151",
-                        fontSize: "13px",
-                        fontWeight: 700,
-                        padding: "12px 16px",
-                        borderBottom: "2px solid #e2e8f0",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      Recaudo
-                    </TableCell>
-
-                    <TableCell
-                      sx={{
-                        width: "30%",
-                        backgroundColor: "#f8fafc",
-                        color: "#374151",
-                        fontSize: "13px",
-                        fontWeight: 700,
-                        padding: "12px 16px",
-                        borderBottom: "2px solid #e2e8f0",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      Acciones
-                    </TableCell>
+                    {["Fecha", "Recaudo", "Acciones"].map((titulo) => (
+                      <TableCell
+                        key={titulo}
+                        sx={{
+                          backgroundColor: "#f8fafc",
+                          color: "#374151",
+                          fontSize: 13,
+                          fontWeight: 700,
+                          py: 1.5,
+                          whiteSpace: "nowrap",
+                          borderBottom: "2px solid #e2e8f0",
+                        }}
+                      >
+                        {titulo}
+                      </TableCell>
+                    ))}
                   </TableRow>
                 </TableHead>
 
                 <TableBody>
                   {filas.map((fila) => (
-                    <TableRow
-                      key={fila.fecha}
-                      hover
-                      sx={{
-                        "&:hover": {
-                          backgroundColor: "#f8fafc",
-                        },
-                      }}
-                    >
-                      <TableCell
-                        sx={{
-                          padding: "14px 16px",
-                          borderBottom: "1px solid #f1f5f9",
-                          fontSize: "13.5px",
-                          color: "#374151",
-                          fontWeight: 500,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
+                    <TableRow key={fila.fecha} hover>
+                      <TableCell sx={{ py: 1.5, whiteSpace: "nowrap" }}>
                         <TextField
                           type="date"
                           value={formatearFecha(fila.fecha)}
                           disabled
                           size="small"
-                          slotProps={{
-                            htmlInput: {
-                              "aria-label": `Fecha ${fila.fecha}`,
-                            },
-                          }}
-                          sx={{
-                            width: 170,
-                            "& .MuiOutlinedInput-root": {
-                              borderRadius: "6px",
-                              bgcolor: "#f8fafc",
-                            },
-                            "& .MuiInputBase-input": {
-                              fontSize: 13.5,
-                              color: "#374151",
-                              py: 1,
-                            },
-                          }}
+                          sx={{ width: 170 }}
                         />
                       </TableCell>
 
-                      <TableCell
-                        sx={{
-                          padding: "14px 16px",
-                          borderBottom: "1px solid #f1f5f9",
-                          fontSize: "13.5px",
-                          color: "#111827",
-                          fontWeight: 700,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
+                      <TableCell sx={{ fontSize: 13.5, fontWeight: 700, whiteSpace: "nowrap" }}>
                         $ {formatearMiles(fila.recaudo)}
                       </TableCell>
 
-                      <TableCell
-                        sx={{
-                          padding: "14px 16px",
-                          borderBottom: "1px solid #f1f5f9",
-                        }}
-                      >
+                      <TableCell>
                         <Button
                           variant="text"
                           onClick={() => verDetalle(fila)}
                           sx={{
                             minWidth: "auto",
-                            padding: 0,
+                            p: 0,
                             color: "#00a8e8",
-                            fontSize: "13.5px",
-                            fontWeight: 400,
+                            fontSize: 13.5,
                             textTransform: "none",
-                            borderRadius: 0,
-                            "&:hover": {
-                              backgroundColor: "transparent",
-                              color: "#0099cc",
-                              textDecoration: "underline",
-                            },
                           }}
                         >
-                          Ver detalle
+                          Ver detalle ({fila.registros.length})
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -567,8 +478,8 @@ function ConciliacionMensual() {
                 </TableBody>
               </Table>
             </TableContainer>
-          )}
-        </Box>
+          </>
+        )}
       </Box>
     </Box>
   );

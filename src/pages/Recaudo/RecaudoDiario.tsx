@@ -33,7 +33,7 @@ interface Movimiento {
   Planilla: string;
   Monto: number;
   Cedula_Usuario: string;
-  TipoRecaudo: "DIGITAL" | "EFECTIVO";
+  TipoRecaudo: "DIGITAL" | "EFECTIVO" | "MICROCREDITO";
 }
 
 interface MovimientoAgrupado {
@@ -49,6 +49,7 @@ interface MovimientoAgrupado {
   facturaTexto: string;
   placaTexto: string;
   planillaTexto: string;
+  totalMicrocredito: number;
 }
 
 function RecaudoDiario() {
@@ -107,7 +108,7 @@ function RecaudoDiario() {
 
     movimientosDelDia.forEach((mov) => {
       const key = `${mov.NombreRuta}_${mov.TelefonoTransportista}`;
-
+      
       if (!mapa.has(key)) {
         mapa.set(key, {
           ruta: mov.NombreRuta || "N/A",
@@ -122,6 +123,7 @@ function RecaudoDiario() {
           facturaTexto: "",
           placaTexto: "",
           planillaTexto: "",
+          totalMicrocredito: 0,
         });
       }
 
@@ -150,6 +152,11 @@ function RecaudoDiario() {
       if (mov.TipoRecaudo === "EFECTIVO") {
         item.totalEfectivo += monto;
       }
+
+      if (mov.TipoRecaudo === "MICROCREDITO") {
+          item.totalMicrocredito += monto;
+      }
+
     });
 
     let resultado = Array.from(mapa.values()).map((item) => ({
