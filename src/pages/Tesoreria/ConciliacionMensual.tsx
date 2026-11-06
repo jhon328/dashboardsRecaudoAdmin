@@ -148,11 +148,56 @@ const datosDemo: RegistroConciliacion[] = [
     ruta: "Ruta Centro",
     tipoRecaudo: "MICROCREDITO",
   },
+  {
+    id: 6,
+    recaudo: 60000,
+    codigo: "FAC-1006",
+    fecha: "30/09/2026",
+    hora: "14:00:00",
+    clienteId: "8100009827",
+    cedula: "1001001006",
+    nombres: "Lucía",
+    apellidos: "Castro",
+    comercio: "Granero Central",
+    departamento: "Valle del Cauca",
+    ciudad: "Cali",
+    empresa: "SURTIALIMENTOS",
+    codigoProducto: "PL-001",
+    cantidad: 1,
+    placa: "ABC123",
+    transportista: "3001234567",
+    ruta: "Ruta Norte",
+    tipoRecaudo: "MICROCREDITO",
+  },
+  {
+    id: 7,
+    recaudo: 180000,
+    codigo: "FAC-1007",
+    fecha: "29/09/2026",
+    hora: "15:30:00",
+    clienteId: "8100009828",
+    cedula: "1001001007",
+    nombres: "Marta",
+    apellidos: "Gómez",
+    comercio: "Super Tienda 29",
+    departamento: "Valle del Cauca",
+    ciudad: "Cali",
+    empresa: "SURTIALIMENTOS",
+    codigoProducto: "PL-003",
+    cantidad: 1,
+    placa: "DEF456",
+    transportista: "3155555555",
+    ruta: "Ruta Centro",
+    tipoRecaudo: "DIGITAL",
+  },
 ];
 
 interface ResumenDiario {
   fecha: string;
   recaudo: number;
+  totalMicrocredito: number;
+  totalDigital: number;
+  totalEfectivo: number;
   registros: RegistroConciliacion[];
 }
 
@@ -201,11 +246,24 @@ function ConciliacionMensual() {
         acumulado[fila.fecha] = {
           fecha: fila.fecha,
           recaudo: 0,
+          totalMicrocredito: 0,
+          totalDigital: 0,
+          totalEfectivo: 0,
           registros: [],
         };
       }
 
-      acumulado[fila.fecha].recaudo += fila.recaudo;
+      const monto = Number(fila.recaudo || 0);
+      acumulado[fila.fecha].recaudo += monto;
+
+      if (fila.tipoRecaudo === "MICROCREDITO") {
+        acumulado[fila.fecha].totalMicrocredito += monto;
+      } else if (fila.tipoRecaudo === "DIGITAL") {
+        acumulado[fila.fecha].totalDigital += monto;
+      } else if (fila.tipoRecaudo === "EFECTIVO") {
+        acumulado[fila.fecha].totalEfectivo += monto;
+      }
+
       acumulado[fila.fecha].registros.push(fila);
 
       return acumulado;
@@ -222,6 +280,21 @@ function ConciliacionMensual() {
 
   const totalFiltrado = useMemo(
     () => filas.reduce((total, fila) => total + fila.recaudo, 0),
+    [filas]
+  );
+
+  const totalMesMicrocredito = useMemo(
+    () => filas.reduce((total, fila) => total + fila.totalMicrocredito, 0),
+    [filas]
+  );
+
+  const totalMesDigital = useMemo(
+    () => filas.reduce((total, fila) => total + fila.totalDigital, 0),
+    [filas]
+  );
+
+  const totalMesEfectivo = useMemo(
+    () => filas.reduce((total, fila) => total + fila.totalEfectivo, 0),
     [filas]
   );
 
@@ -315,9 +388,9 @@ function ConciliacionMensual() {
             sx={{ width: { xs: "100%", sm: 230 } }}
           >
             <MenuItem value="TODOS">Todos</MenuItem>
-            <MenuItem value="DIGITAL">Pagos digitales</MenuItem>
-            <MenuItem value="EFECTIVO">Pagos en efectivo</MenuItem>
-            <MenuItem value="MICROCREDITO">Pagos microcrédito</MenuItem>
+            <MenuItem value="MICROCREDITO">Microcrédito</MenuItem>
+            <MenuItem value="DIGITAL">Digital</MenuItem>
+            <MenuItem value="EFECTIVO">Efectivo</MenuItem>
           </TextField>
         </Box>
 
@@ -396,22 +469,55 @@ function ConciliacionMensual() {
             >
               <Box>
                 <Typography sx={{ fontSize: 13, color: "#6b7280" }}>
-                  Total recaudado
+                  {tipoPagoSeleccionado === "TODOS"
+                    ? "Total recaudado"
+                    : tipoPagoSeleccionado === "MICROCREDITO"
+                      ? "Total microcrédito"
+                      : tipoPagoSeleccionado === "DIGITAL"
+                        ? "Total digital"
+                        : "Total efectivo"}
                 </Typography>
                 <Typography sx={{ fontSize: 26, fontWeight: 800, color: "#111827" }}>
                   $ {formatearMiles(totalFiltrado)}
                 </Typography>
               </Box>
 
-              <Typography sx={{ fontSize: 13, color: "#6b7280" }}>
-                {tipoPagoSeleccionado === "TODOS"
-                  ? "Todos los pagos"
-                  : tipoPagoSeleccionado === "DIGITAL"
-                    ? "Pagos digitales"
-                    : tipoPagoSeleccionado === "EFECTIVO"
-                      ? "Pagos en efectivo"
-                      : "Pagos microcrédito"}
-              </Typography>
+              {tipoPagoSeleccionado === "TODOS" ? (
+                <Box sx={{ display: "flex", gap: { xs: 2, sm: 3 }, flexWrap: "wrap" }}>
+                  <Box>
+                    <Typography sx={{ fontSize: 12, color: "#6b7280" }}>
+                      Microcrédito
+                    </Typography>
+                    <Typography sx={{ fontSize: 15, fontWeight: 700, color: "#7c3aed" }}>
+                      $ {formatearMiles(totalMesMicrocredito)}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography sx={{ fontSize: 12, color: "#6b7280" }}>
+                      Digital
+                    </Typography>
+                    <Typography sx={{ fontSize: 15, fontWeight: 700, color: "#0284c7" }}>
+                      $ {formatearMiles(totalMesDigital)}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography sx={{ fontSize: 12, color: "#6b7280" }}>
+                      Efectivo
+                    </Typography>
+                    <Typography sx={{ fontSize: 15, fontWeight: 700, color: "#15803d" }}>
+                      $ {formatearMiles(totalMesEfectivo)}
+                    </Typography>
+                  </Box>
+                </Box>
+              ) : (
+                <Typography sx={{ fontSize: 13, color: "#6b7280", fontWeight: 600 }}>
+                  {tipoPagoSeleccionado === "MICROCREDITO"
+                    ? "Pagos microcrédito"
+                    : tipoPagoSeleccionado === "DIGITAL"
+                      ? "Pagos digitales"
+                      : "Pagos en efectivo"}
+                </Typography>
+              )}
             </Paper>
 
             <TableContainer
@@ -419,15 +525,29 @@ function ConciliacionMensual() {
               elevation={0}
               sx={{ width: "100%", borderRadius: 2, overflowX: "auto", border: "1px solid #f1f5f9" }}
             >
-              <Table sx={{ minWidth: 650 }}>
+              <Table sx={{ minWidth: 800 }}>
                 <TableHead>
                   <TableRow>
-                    {["Fecha", "Recaudo", "Acciones"].map((titulo) => (
+                    <TableCell
+                      sx={{
+                        backgroundColor: "#f8fafc",
+                        color: "#374151",
+                        fontSize: 13,
+                        fontWeight: 700,
+                        py: 1.5,
+                        whiteSpace: "nowrap",
+                        borderBottom: "2px solid #e2e8f0",
+                      }}
+                    >
+                      Fecha
+                    </TableCell>
+
+                    {(tipoPagoSeleccionado === "TODOS" ||
+                      tipoPagoSeleccionado === "MICROCREDITO") && (
                       <TableCell
-                        key={titulo}
                         sx={{
                           backgroundColor: "#f8fafc",
-                          color: "#374151",
+                          color: "#7c3aed",
                           fontSize: 13,
                           fontWeight: 700,
                           py: 1.5,
@@ -435,9 +555,57 @@ function ConciliacionMensual() {
                           borderBottom: "2px solid #e2e8f0",
                         }}
                       >
-                        {titulo}
+                        Microcrédito
                       </TableCell>
-                    ))}
+                    )}
+
+                    {(tipoPagoSeleccionado === "TODOS" ||
+                      tipoPagoSeleccionado === "DIGITAL") && (
+                      <TableCell
+                        sx={{
+                          backgroundColor: "#f8fafc",
+                          color: "#0284c7",
+                          fontSize: 13,
+                          fontWeight: 700,
+                          py: 1.5,
+                          whiteSpace: "nowrap",
+                          borderBottom: "2px solid #e2e8f0",
+                        }}
+                      >
+                        Digital
+                      </TableCell>
+                    )}
+
+                    {(tipoPagoSeleccionado === "TODOS" ||
+                      tipoPagoSeleccionado === "EFECTIVO") && (
+                      <TableCell
+                        sx={{
+                          backgroundColor: "#f8fafc",
+                          color: "#15803d",
+                          fontSize: 13,
+                          fontWeight: 700,
+                          py: 1.5,
+                          whiteSpace: "nowrap",
+                          borderBottom: "2px solid #e2e8f0",
+                        }}
+                      >
+                        Efectivo
+                      </TableCell>
+                    )}
+
+                    <TableCell
+                      sx={{
+                        backgroundColor: "#f8fafc",
+                        color: "#374151",
+                        fontSize: 13,
+                        fontWeight: 700,
+                        py: 1.5,
+                        whiteSpace: "nowrap",
+                        borderBottom: "2px solid #e2e8f0",
+                      }}
+                    >
+                      Acciones
+                    </TableCell>
                   </TableRow>
                 </TableHead>
 
@@ -454,9 +622,47 @@ function ConciliacionMensual() {
                         />
                       </TableCell>
 
-                      <TableCell sx={{ fontSize: 13.5, fontWeight: 700, whiteSpace: "nowrap" }}>
-                        $ {formatearMiles(fila.recaudo)}
-                      </TableCell>
+                      {(tipoPagoSeleccionado === "TODOS" ||
+                        tipoPagoSeleccionado === "MICROCREDITO") && (
+                        <TableCell
+                          sx={{
+                            fontSize: 13.5,
+                            fontWeight: 700,
+                            color: "#7c3aed",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          $ {formatearMiles(fila.totalMicrocredito)}
+                        </TableCell>
+                      )}
+
+                      {(tipoPagoSeleccionado === "TODOS" ||
+                        tipoPagoSeleccionado === "DIGITAL") && (
+                        <TableCell
+                          sx={{
+                            fontSize: 13.5,
+                            fontWeight: 700,
+                            color: "#0284c7",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          $ {formatearMiles(fila.totalDigital)}
+                        </TableCell>
+                      )}
+
+                      {(tipoPagoSeleccionado === "TODOS" ||
+                        tipoPagoSeleccionado === "EFECTIVO") && (
+                        <TableCell
+                          sx={{
+                            fontSize: 13.5,
+                            fontWeight: 700,
+                            color: "#15803d",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          $ {formatearMiles(fila.totalEfectivo)}
+                        </TableCell>
+                      )}
 
                       <TableCell>
                         <Button

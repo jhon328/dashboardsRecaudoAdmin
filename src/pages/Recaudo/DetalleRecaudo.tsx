@@ -1054,10 +1054,12 @@ const pagos: PagoDetalle[] = pagoSeleccionado
         onClose={cerrarDetallePago}
         fullWidth
         maxWidth="sm"
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            m: 2,
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: 3,
+              m: 2,
+            },
           },
         }}
       >

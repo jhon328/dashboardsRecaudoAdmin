@@ -59,7 +59,7 @@ function RecaudoDiario() {
     useState<Movimiento[]>([]);
 
   const [fechaSeleccionada, setFechaSeleccionada] =
-    useState(new Date().toISOString().substring(0, 10));
+    useState("2026-09-30");
 
   const [busquedaFiltro, setBusquedaFiltro] = useState("");
   const [rutaSeleccionada, setRutaSeleccionada] = useState("");
@@ -226,6 +226,17 @@ function RecaudoDiario() {
       .reduce((acc, mov) => acc + Number(mov.Monto || 0), 0);
   }, [movimientosDelDia, rutaSeleccionada]);
 
+  const totalRecaudoMicrocredito = useMemo(() => {
+    return movimientosDelDia
+      .filter(
+        (mov) =>
+          (!rutaSeleccionada ||
+            mov.NombreRuta === rutaSeleccionada) &&
+          mov.TipoRecaudo === "MICROCREDITO"
+      )
+      .reduce((acc, mov) => acc + Number(mov.Monto || 0), 0);
+  }, [movimientosDelDia, rutaSeleccionada]);
+
   useEffect(() => {
     // Datos de ejemplo.
     // Reemplázalos por los datos reales de tu backend.
@@ -265,6 +276,17 @@ function RecaudoDiario() {
         TipoRecaudo: "DIGITAL",
       },
       {
+        FechaHoraMovimiento: "2026-09-30T11:45:00",
+        NombreRuta: "Ruta Norte",
+        TelefonoTransportista: "3001234567",
+        NroFacturaAlpina: "FAC-1005",
+        Placa: "ABC123",
+        Planilla: "PL-001",
+        Monto: 95000,
+        Cedula_Usuario: "1001001005",
+        TipoRecaudo: "MICROCREDITO",
+      },
+      {
         FechaHoraMovimiento: "2026-09-29T11:00:00",
         NombreRuta: "Ruta Centro",
         TelefonoTransportista: "3155555555",
@@ -291,6 +313,7 @@ function RecaudoDiario() {
         total: item.totalRecaudado,
         totalDigital: item.totalDigital,
         totalEfectivo: item.totalEfectivo,
+        totalMicrocredito: item.totalMicrocredito,
         movimientos: item.movimientos,
       })
     );
@@ -325,17 +348,23 @@ function RecaudoDiario() {
         }}
       >
         <Box sx={{ width: "100%", maxWidth: "100%" }}>
-          <Typography
-            component="h1"
-            sx={{
-              fontSize: 24,
-              fontWeight: 800,
-              color: "#000",
-              mb: 3,
-            }}
-          >
-            Recaudo Diario
-          </Typography>
+          <Box sx={{ mb: 3 }}>
+            <Typography
+              component="h1"
+              sx={{
+                fontSize: 24,
+                fontWeight: 800,
+                color: "#000",
+              }}
+            >
+              Recaudo Diario
+            </Typography>
+            {fechaFormateada && (
+              <Typography sx={{ fontSize: 13, color: "#6b7280", mt: 0.5, textTransform: "capitalize" }}>
+                {fechaFormateada}
+              </Typography>
+            )}
+          </Box>
 
           <Box
             sx={{
@@ -458,6 +487,17 @@ function RecaudoDiario() {
               >
                 Efectivo: $ {formatoMiles(totalRecaudoEfectivo)}
               </Typography>
+
+              <Typography
+                sx={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: "#7c3aed",
+                  mt: 0.5,
+                }}
+              >
+                Microcrédito: $ {formatoMiles(totalRecaudoMicrocredito)}
+              </Typography>
             </Box>
           </Box>
 
@@ -508,7 +548,7 @@ function RecaudoDiario() {
             <Table
               sx={{
                 width: "100%",
-                minWidth: 1250,
+                minWidth: 1400,
                 borderCollapse: "collapse",
               }}
             >
@@ -522,15 +562,16 @@ function RecaudoDiario() {
                     "Total Recaudado",
                     "Total Recaudo Digital",
                     "Total Recaudo Efectivo",
+                    "Total Recaudo Microcrédito",
                     "Acciones",
                   ].map((columna) => (
                     <TableCell
                       key={columna}
                       sx={{
                         backgroundColor: "#f8fafc",
-                        color: "#374151",
+                        color: columna === "Ruta" ? "#111827" : "#374151",
                         fontSize: "13px",
-                        fontWeight: 700,
+                        fontWeight: columna === "Ruta" ? 800 : 700,
                         padding: "12px 16px",
                         borderBottom: "2px solid #e2e8f0",
                         whiteSpace: "nowrap",
@@ -558,8 +599,8 @@ function RecaudoDiario() {
                         padding: "14px 16px",
                         borderBottom: "1px solid #f1f5f9",
                         fontSize: "13.5px",
-                        color: "#374151",
-                        fontWeight: 500,
+                        color: "#111827",
+                        fontWeight: 700,
                         whiteSpace: "nowrap",
                       }}
                     >
@@ -583,8 +624,8 @@ function RecaudoDiario() {
                         padding: "14px 16px",
                         borderBottom: "1px solid #f1f5f9",
                         fontSize: "13.5px",
-                        color: "#111827",
-                        fontWeight: 600,
+                        color: "#374151",
+                        fontWeight: 400,
                         whiteSpace: "nowrap",
                       }}
                     >
@@ -646,6 +687,19 @@ function RecaudoDiario() {
                       sx={{
                         padding: "14px 16px",
                         borderBottom: "1px solid #f1f5f9",
+                        fontSize: "13.5px",
+                        color: "#7c3aed",
+                        fontWeight: 600,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      $ {formatoMiles(item.totalMicrocredito)}
+                    </TableCell>
+
+                    <TableCell
+                      sx={{
+                        padding: "14px 16px",
+                        borderBottom: "1px solid #f1f5f9",
                       }}
                     >
                       <Button
@@ -675,7 +729,7 @@ function RecaudoDiario() {
                 {listaAgrupada.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={8}
+                      colSpan={9}
                       align="center"
                       sx={{
                         padding: "30px",
