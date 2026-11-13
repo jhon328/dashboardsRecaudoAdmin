@@ -116,6 +116,8 @@ const nombreTipoPago = (tipo: string) => {
       return "Efectivo";
     case "MICROCREDITO":
       return "Microcrédito";
+    case "CORRESPONSAL":
+      return "Consignación Corresponsal Bancario";
     default:
       return "Todos";
   }

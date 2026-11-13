@@ -32,8 +32,10 @@ interface Movimiento {
   Placa: string;
   Planilla: string;
   Monto: number;
+  MercanciaDevuelta?: number;
+  TotalARecaudar?: number;
   Cedula_Usuario: string;
-  TipoRecaudo: "DIGITAL" | "EFECTIVO" | "MICROCREDITO";
+  TipoRecaudo: "DIGITAL" | "EFECTIVO" | "CORRESPONSAL" | "MICROCREDITO";
 }
 
 interface MovimientoAgrupado {
@@ -43,13 +45,15 @@ interface MovimientoAgrupado {
   placas: Set<string>;
   planillas: Set<string>;
   movimientos: Movimiento[];
+  totalARecaudar: number;
+  totalMercanciaDevuelta: number;
   totalRecaudado: number;
   totalDigital: number;
+  consignacionesCorresponsal: number;
   totalEfectivo: number;
   facturaTexto: string;
   placaTexto: string;
   planillaTexto: string;
-  totalMicrocredito: number;
 }
 
 function RecaudoDiario() {
@@ -117,21 +121,29 @@ function RecaudoDiario() {
           placas: new Set<string>(),
           planillas: new Set<string>(),
           movimientos: [],
+          totalARecaudar: 0,
+          totalMercanciaDevuelta: 0,
           totalRecaudado: 0,
           totalDigital: 0,
+          consignacionesCorresponsal: 0,
           totalEfectivo: 0,
           facturaTexto: "",
           placaTexto: "",
           planillaTexto: "",
-          totalMicrocredito: 0,
         });
       }
 
       const item = mapa.get(key)!;
       const monto = Number(mov.Monto || 0);
+      const devuelto = Number(mov.MercanciaDevuelta || 0);
+      const aRecaudar = Number(
+        mov.TotalARecaudar ?? (monto + devuelto)
+      );
 
       item.movimientos.push(mov);
       item.totalRecaudado += monto;
+      item.totalMercanciaDevuelta += devuelto;
+      item.totalARecaudar += aRecaudar;
 
       if (mov.NroFacturaAlpina) {
         item.facturas.add(mov.NroFacturaAlpina);
@@ -149,12 +161,12 @@ function RecaudoDiario() {
         item.totalDigital += monto;
       }
 
-      if (mov.TipoRecaudo === "EFECTIVO") {
-        item.totalEfectivo += monto;
+      if (mov.TipoRecaudo === "CORRESPONSAL") {
+        item.consignacionesCorresponsal += monto;
       }
 
-      if (mov.TipoRecaudo === "MICROCREDITO") {
-          item.totalMicrocredito += monto;
+      if (mov.TipoRecaudo === "EFECTIVO") {
+        item.totalEfectivo += monto;
       }
 
     });
@@ -204,6 +216,34 @@ function RecaudoDiario() {
       .reduce((acc, mov) => acc + Number(mov.Monto || 0), 0);
   }, [movimientosDelDia, rutaSeleccionada]);
 
+  const totalARecaudar = useMemo(() => {
+    return movimientosDelDia
+      .filter(
+        (mov) =>
+          !rutaSeleccionada ||
+          mov.NombreRuta === rutaSeleccionada
+      )
+      .reduce(
+        (acc, mov) =>
+          acc +
+          Number(
+            mov.TotalARecaudar ??
+              (Number(mov.Monto || 0) + Number(mov.MercanciaDevuelta || 0))
+          ),
+        0
+      );
+  }, [movimientosDelDia, rutaSeleccionada]);
+
+  const totalMercanciaDevuelta = useMemo(() => {
+    return movimientosDelDia
+      .filter(
+        (mov) =>
+          !rutaSeleccionada ||
+          mov.NombreRuta === rutaSeleccionada
+      )
+      .reduce((acc, mov) => acc + Number(mov.MercanciaDevuelta || 0), 0);
+  }, [movimientosDelDia, rutaSeleccionada]);
+
   const totalRecaudoDigital = useMemo(() => {
     return movimientosDelDia
       .filter(
@@ -215,6 +255,17 @@ function RecaudoDiario() {
       .reduce((acc, mov) => acc + Number(mov.Monto || 0), 0);
   }, [movimientosDelDia, rutaSeleccionada]);
 
+  const totalConsignacionesCorresponsal = useMemo(() => {
+    return movimientosDelDia
+      .filter(
+        (mov) =>
+          (!rutaSeleccionada ||
+            mov.NombreRuta === rutaSeleccionada) &&
+          mov.TipoRecaudo === "CORRESPONSAL"
+      )
+      .reduce((acc, mov) => acc + Number(mov.Monto || 0), 0);
+  }, [movimientosDelDia, rutaSeleccionada]);
+
   const totalRecaudoEfectivo = useMemo(() => {
     return movimientosDelDia
       .filter(
@@ -222,17 +273,6 @@ function RecaudoDiario() {
           (!rutaSeleccionada ||
             mov.NombreRuta === rutaSeleccionada) &&
           mov.TipoRecaudo === "EFECTIVO"
-      )
-      .reduce((acc, mov) => acc + Number(mov.Monto || 0), 0);
-  }, [movimientosDelDia, rutaSeleccionada]);
-
-  const totalRecaudoMicrocredito = useMemo(() => {
-    return movimientosDelDia
-      .filter(
-        (mov) =>
-          (!rutaSeleccionada ||
-            mov.NombreRuta === rutaSeleccionada) &&
-          mov.TipoRecaudo === "MICROCREDITO"
       )
       .reduce((acc, mov) => acc + Number(mov.Monto || 0), 0);
   }, [movimientosDelDia, rutaSeleccionada]);
@@ -249,6 +289,8 @@ function RecaudoDiario() {
         NroFacturaAlpina: "FAC-1001",
         Placa: "ABC123",
         Planilla: "PL-001",
+        TotalARecaudar: 160000,
+        MercanciaDevuelta: 10000,
         Monto: 150000,
         Cedula_Usuario: "1001001001",
         TipoRecaudo: "DIGITAL",
@@ -260,20 +302,11 @@ function RecaudoDiario() {
         NroFacturaAlpina: "FAC-1002",
         Placa: "ABC123",
         Planilla: "PL-001",
+        TotalARecaudar: 100000,
+        MercanciaDevuelta: 15000,
         Monto: 85000,
         Cedula_Usuario: "1001001002",
         TipoRecaudo: "EFECTIVO",
-      },
-      {
-        FechaHoraMovimiento: "2026-09-30T10:30:00",
-        NombreRuta: "Ruta Sur",
-        TelefonoTransportista: "3109876543",
-        NroFacturaAlpina: "FAC-1003",
-        Placa: "XYZ789",
-        Planilla: "PL-002",
-        Monto: 220000,
-        Cedula_Usuario: "1001001003",
-        TipoRecaudo: "DIGITAL",
       },
       {
         FechaHoraMovimiento: "2026-09-30T11:45:00",
@@ -282,9 +315,24 @@ function RecaudoDiario() {
         NroFacturaAlpina: "FAC-1005",
         Placa: "ABC123",
         Planilla: "PL-001",
+        TotalARecaudar: 95000,
+        MercanciaDevuelta: 0,
         Monto: 95000,
         Cedula_Usuario: "1001001005",
-        TipoRecaudo: "MICROCREDITO",
+        TipoRecaudo: "CORRESPONSAL",
+      },
+      {
+        FechaHoraMovimiento: "2026-09-30T10:30:00",
+        NombreRuta: "Ruta Sur",
+        TelefonoTransportista: "3109876543",
+        NroFacturaAlpina: "FAC-1003",
+        Placa: "XYZ789",
+        Planilla: "PL-002",
+        TotalARecaudar: 240000,
+        MercanciaDevuelta: 20000,
+        Monto: 220000,
+        Cedula_Usuario: "1001001003",
+        TipoRecaudo: "DIGITAL",
       },
       {
         FechaHoraMovimiento: "2026-09-29T11:00:00",
@@ -293,6 +341,8 @@ function RecaudoDiario() {
         NroFacturaAlpina: "FAC-1004",
         Placa: "DEF456",
         Planilla: "PL-003",
+        TotalARecaudar: 130000,
+        MercanciaDevuelta: 10000,
         Monto: 120000,
         Cedula_Usuario: "1001001004",
         TipoRecaudo: "EFECTIVO",
@@ -310,10 +360,12 @@ function RecaudoDiario() {
         factura: item.facturaTexto,
         placa: item.placaTexto,
         planilla: item.planillaTexto,
+        totalARecaudar: item.totalARecaudar,
+        totalMercanciaDevuelta: item.totalMercanciaDevuelta,
         total: item.totalRecaudado,
         totalDigital: item.totalDigital,
+        consignacionesCorresponsal: item.consignacionesCorresponsal,
         totalEfectivo: item.totalEfectivo,
-        totalMicrocredito: item.totalMicrocredito,
         movimientos: item.movimientos,
       })
     );
@@ -466,38 +518,23 @@ function RecaudoDiario() {
                 Total Recaudado Día
               </Typography>
 
-              <Typography
-                sx={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: "#0284c7",
-                  mt: 1,
-                }}
-              >
-                Digital: $ {formatoMiles(totalRecaudoDigital)}
-              </Typography>
-
-              <Typography
-                sx={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: "#15803d",
-                  mt: 0.5,
-                }}
-              >
-                Efectivo: $ {formatoMiles(totalRecaudoEfectivo)}
-              </Typography>
-
-              <Typography
-                sx={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: "#7c3aed",
-                  mt: 0.5,
-                }}
-              >
-                Microcrédito: $ {formatoMiles(totalRecaudoMicrocredito)}
-              </Typography>
+              <Box sx={{ mt: 1.5, display: "flex", flexDirection: "column", gap: 0.5, alignItems: "flex-end" }}>
+                <Typography sx={{ fontSize: 13, color: "#374151", fontWeight: 600 }}>
+                  Total a Recaudar: $ {formatoMiles(totalARecaudar)}
+                </Typography>
+                <Typography sx={{ fontSize: 13, color: "#dc2626", fontWeight: 600 }}>
+                  Mercancía Devuelta: $ {formatoMiles(totalMercanciaDevuelta)}
+                </Typography>
+                <Typography sx={{ fontSize: 13, color: "#0284c7", fontWeight: 600 }}>
+                  Digital: $ {formatoMiles(totalRecaudoDigital)}
+                </Typography>
+                <Typography sx={{ fontSize: 13, color: "#0f766e", fontWeight: 600 }}>
+                  Consignaciones Corresponsal: $ {formatoMiles(totalConsignacionesCorresponsal)}
+                </Typography>
+                <Typography sx={{ fontSize: 13, color: "#15803d", fontWeight: 600 }}>
+                  Efectivo: $ {formatoMiles(totalRecaudoEfectivo)}
+                </Typography>
+              </Box>
             </Box>
           </Box>
 
@@ -548,7 +585,7 @@ function RecaudoDiario() {
             <Table
               sx={{
                 width: "100%",
-                minWidth: 1400,
+                minWidth: 1650,
                 borderCollapse: "collapse",
               }}
             >
@@ -559,10 +596,12 @@ function RecaudoDiario() {
                     "Planilla",
                     "Teléfono",
                     "Placa",
+                    "Total a Recaudar",
+                    "Total Mercancía Devuelta",
                     "Total Recaudado",
                     "Total Recaudo Digital",
+                    "Consignaciones Corresponsal Bancarios",
                     "Total Recaudo Efectivo",
-                    "Total Recaudo Microcrédito",
                     "Acciones",
                   ].map((columna) => (
                     <TableCell
@@ -575,9 +614,31 @@ function RecaudoDiario() {
                         padding: "12px 16px",
                         borderBottom: "2px solid #e2e8f0",
                         whiteSpace: "nowrap",
+                        verticalAlign: "bottom",
+                        lineHeight: 1.25,
                       }}
                     >
-                      {columna}
+                      {columna === "Total Mercancía Devuelta" ? (
+                        <Box sx={{ display: "inline-block", textAlign: "left" }}>
+                          <Box component="span" sx={{ display: "block" }}>
+                            Total Mercancía
+                          </Box>
+                          <Box component="span" sx={{ display: "block" }}>
+                            Devuelta
+                          </Box>
+                        </Box>
+                      ) : columna === "Consignaciones Corresponsal Bancarios" ? (
+                        <Box sx={{ display: "inline-block", textAlign: "left" }}>
+                          <Box component="span" sx={{ display: "block" }}>
+                            Consignaciones
+                          </Box>
+                          <Box component="span" sx={{ display: "block" }}>
+                            Corresponsal Bancarios
+                          </Box>
+                        </Box>
+                      ) : (
+                        columna
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -650,6 +711,32 @@ function RecaudoDiario() {
                         borderBottom: "1px solid #f1f5f9",
                         fontSize: "13.5px",
                         color: "#111827",
+                        fontWeight: 600,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      $ {formatoMiles(item.totalARecaudar)}
+                    </TableCell>
+
+                    <TableCell
+                      sx={{
+                        padding: "14px 16px",
+                        borderBottom: "1px solid #f1f5f9",
+                        fontSize: "13.5px",
+                        color: "#dc2626",
+                        fontWeight: 600,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      $ {formatoMiles(item.totalMercanciaDevuelta)}
+                    </TableCell>
+
+                    <TableCell
+                      sx={{
+                        padding: "14px 16px",
+                        borderBottom: "1px solid #f1f5f9",
+                        fontSize: "13.5px",
+                        color: "#111827",
                         fontWeight: 700,
                         whiteSpace: "nowrap",
                       }}
@@ -675,12 +762,12 @@ function RecaudoDiario() {
                         padding: "14px 16px",
                         borderBottom: "1px solid #f1f5f9",
                         fontSize: "13.5px",
-                        color: "#15803d",
+                        color: "#0f766e",
                         fontWeight: 600,
                         whiteSpace: "nowrap",
                       }}
                     >
-                      $ {formatoMiles(item.totalEfectivo)}
+                      $ {formatoMiles(item.consignacionesCorresponsal)}
                     </TableCell>
 
                     <TableCell
@@ -688,12 +775,12 @@ function RecaudoDiario() {
                         padding: "14px 16px",
                         borderBottom: "1px solid #f1f5f9",
                         fontSize: "13.5px",
-                        color: "#7c3aed",
+                        color: "#15803d",
                         fontWeight: 600,
                         whiteSpace: "nowrap",
                       }}
                     >
-                      $ {formatoMiles(item.totalMicrocredito)}
+                      $ {formatoMiles(item.totalEfectivo)}
                     </TableCell>
 
                     <TableCell
@@ -729,7 +816,7 @@ function RecaudoDiario() {
                 {listaAgrupada.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={9}
+                      colSpan={11}
                       align="center"
                       sx={{
                         padding: "30px",
