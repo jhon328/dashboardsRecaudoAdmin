@@ -421,122 +421,139 @@ function RecaudoDiario() {
           <Box
             sx={{
               display: "flex",
-              justifyContent: "space-between",
               alignItems: "flex-start",
               gap: 2,
               mb: 3,
               width: "100%",
-              flexWrap: { xs: "wrap", sm: "nowrap" },
+              flexWrap: "wrap",
             }}
           >
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 2,
-                minWidth: 0,
+            <TextField
+              label="Fecha"
+              type="date"
+              value={fechaSeleccionada}
+              onChange={(event) =>
+                setFechaSeleccionada(event.target.value)
+              }
+              size="small"
+              slotProps={{
+                inputLabel: { shrink: true },
+                htmlInput: {
+                  "aria-label": "Fecha de recaudo",
+                },
               }}
-            >
-              <TextField
-                label="Fecha"
-                type="date"
-                value={fechaSeleccionada}
-                onChange={(event) =>
-                  setFechaSeleccionada(event.target.value)
-                }
-                size="small"
-                slotProps={{
-                  inputLabel: { shrink: true },
-                  htmlInput: {
-                    "aria-label": "Fecha de recaudo",
-                  },
-                }}
-                sx={{
-                  width: 220,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: "6px",
-                    bgcolor: "#fff",
-                  },
-                  "& .MuiInputBase-input": {
-                    fontSize: 14,
-                    color: "#374151",
-                  },
-                  "& .MuiInputLabel-root": {
-                    fontSize: 13,
-                  },
-                }}
-              />
-
-              <FormControl size="small" sx={{ width: 220 }}>
-                <InputLabel>Ruta</InputLabel>
-
-                <Select
-                  value={rutaSeleccionada}
-                  label="Ruta"
-                  onChange={cambiarRuta}
-                  sx={{
-                    borderRadius: "6px",
-                    fontSize: 14,
-                    color: "#374151",
-                  }}
-                >
-                  <MenuItem value="">Todas las rutas</MenuItem>
-
-                  {rutasDisponibles.map((ruta) => (
-                    <MenuItem key={ruta} value={ruta}>
-                      {ruta}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-
-            <Box
               sx={{
-                textAlign: "right",
-                pr: { xs: 1, sm: 2, md: 3 },
+                width: { xs: "100%", sm: 220 },
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: "6px",
+                  bgcolor: "#fff",
+                },
+                "& .MuiInputBase-input": {
+                  fontSize: 14,
+                  color: "#374151",
+                },
+                "& .MuiInputLabel-root": {
+                  fontSize: 13,
+                },
               }}
-            >
-              <Typography
+            />
+
+            <FormControl size="small" sx={{ width: { xs: "100%", sm: 220 } }}>
+              <InputLabel>Ruta</InputLabel>
+
+              <Select
+                value={rutaSeleccionada}
+                label="Ruta"
+                onChange={cambiarRuta}
                 sx={{
-                  fontSize: 28,
-                  fontWeight: 800,
-                  color: "#000",
-                  lineHeight: 1.2,
+                  borderRadius: "6px",
+                  fontSize: 14,
+                  color: "#374151",
                 }}
               >
+                <MenuItem value="">Todas las rutas</MenuItem>
+
+                {rutasDisponibles.map((ruta) => (
+                  <MenuItem key={ruta} value={ruta}>
+                    {ruta}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+
+          <Paper
+            elevation={0}
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 2,
+              flexWrap: "wrap",
+              p: 2.5,
+              px: { xs: 2, sm: 3 },
+              mb: 3,
+              border: "1px solid #e5e7eb",
+              borderRadius: 2,
+              bgcolor: "#fff",
+            }}
+          >
+            <Box>
+              <Typography sx={{ fontSize: 13, color: "#6b7280" }}>
+                Total recaudado
+              </Typography>
+              <Typography sx={{ fontSize: 26, fontWeight: 800, color: "#111827" }}>
                 $ {formatoMiles(totalRecaudo)}
               </Typography>
+            </Box>
 
-              <Typography
-                sx={{
-                  fontSize: 13,
-                  color: "#6b7280",
-                  mt: 0.5,
-                }}
-              >
-                Total Recaudado Día
-              </Typography>
+            <Box sx={{ display: "flex", gap: { xs: 2, sm: 3, md: 4 }, flexWrap: "wrap", alignItems: "center" }}>
+              <Box>
+                <Typography sx={{ fontSize: 12, color: "#6b7280", mb: 0.5 }}>
+                  Total a Recaudar
+                </Typography>
+                <Typography sx={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>
+                  $ {formatoMiles(totalARecaudar)}
+                </Typography>
+              </Box>
 
-              <Box sx={{ mt: 1.5, display: "flex", flexDirection: "column", gap: 0.5, alignItems: "flex-end" }}>
-                <Typography sx={{ fontSize: 13, color: "#374151", fontWeight: 600 }}>
-                  Total a Recaudar: $ {formatoMiles(totalARecaudar)}
+              <Box>
+                <Typography sx={{ fontSize: 12, color: "#6b7280", mb: 0.5 }}>
+                  Mercancía Devuelta
                 </Typography>
-                <Typography sx={{ fontSize: 13, color: "#dc2626", fontWeight: 600 }}>
-                  Mercancía Devuelta: $ {formatoMiles(totalMercanciaDevuelta)}
+                <Typography sx={{ fontSize: 15, fontWeight: 700, color: "#dc2626" }}>
+                  $ {formatoMiles(totalMercanciaDevuelta)}
                 </Typography>
-                <Typography sx={{ fontSize: 13, color: "#0284c7", fontWeight: 600 }}>
-                  Digital: $ {formatoMiles(totalRecaudoDigital)}
+              </Box>
+
+              <Box>
+                <Typography sx={{ fontSize: 12, color: "#6b7280", mb: 0.5 }}>
+                  Digital
                 </Typography>
-                <Typography sx={{ fontSize: 13, color: "#0f766e", fontWeight: 600 }}>
-                  Consignaciones Corresponsal: $ {formatoMiles(totalConsignacionesCorresponsal)}
+                <Typography sx={{ fontSize: 15, fontWeight: 700, color: "#0284c7" }}>
+                  $ {formatoMiles(totalRecaudoDigital)}
                 </Typography>
-                <Typography sx={{ fontSize: 13, color: "#15803d", fontWeight: 600 }}>
-                  Efectivo: $ {formatoMiles(totalRecaudoEfectivo)}
+              </Box>
+
+              <Box>
+                <Typography sx={{ fontSize: 12, color: "#6b7280", mb: 0.5 }}>
+                  Corresponsal
+                </Typography>
+                <Typography sx={{ fontSize: 15, fontWeight: 700, color: "#0f766e" }}>
+                  $ {formatoMiles(totalConsignacionesCorresponsal)}
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography sx={{ fontSize: 12, color: "#6b7280", mb: 0.5 }}>
+                  Efectivo
+                </Typography>
+                <Typography sx={{ fontSize: 15, fontWeight: 700, color: "#15803d" }}>
+                  $ {formatoMiles(totalRecaudoEfectivo)}
                 </Typography>
               </Box>
             </Box>
-          </Box>
+          </Paper>
 
           <TextField
             fullWidth
