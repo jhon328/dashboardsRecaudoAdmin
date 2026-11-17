@@ -136,14 +136,9 @@ function RecaudoDiario() {
       const item = mapa.get(key)!;
       const monto = Number(mov.Monto || 0);
       const devuelto = Number(mov.MercanciaDevuelta || 0);
-      const aRecaudar = Number(
-        mov.TotalARecaudar ?? (monto + devuelto)
-      );
 
       item.movimientos.push(mov);
-      item.totalRecaudado += monto;
       item.totalMercanciaDevuelta += devuelto;
-      item.totalARecaudar += aRecaudar;
 
       if (mov.NroFacturaAlpina) {
         item.facturas.add(mov.NroFacturaAlpina);
@@ -171,15 +166,26 @@ function RecaudoDiario() {
 
     });
 
-    let resultado = Array.from(mapa.values()).map((item) => ({
-      ...item,
-      facturaTexto:
-        Array.from(item.facturas).join(", ") || "N/A",
-      placaTexto:
-        Array.from(item.placas).join(", ") || "N/A",
-      planillaTexto:
-        Array.from(item.planillas).join(", ") || "N/A",
-    }));
+    let resultado = Array.from(mapa.values()).map((item) => {
+      // El total recaudado y el total a recaudar son el valor real completo incluyendo pagos y devoluciones (sin restas)
+      const valorTotalReal =
+        item.totalDigital +
+        item.consignacionesCorresponsal +
+        item.totalEfectivo +
+        item.totalMercanciaDevuelta;
+
+      return {
+        ...item,
+        totalRecaudado: valorTotalReal,
+        totalARecaudar: valorTotalReal,
+        facturaTexto:
+          Array.from(item.facturas).join(", ") || "N/A",
+        placaTexto:
+          Array.from(item.placas).join(", ") || "N/A",
+        planillaTexto:
+          Array.from(item.planillas).join(", ") || "N/A",
+      };
+    });
 
     if (rutaSeleccionada) {
       resultado = resultado.filter(
@@ -205,34 +211,6 @@ function RecaudoDiario() {
     rutaSeleccionada,
     busquedaFiltro,
   ]);
-
-  const totalRecaudo = useMemo(() => {
-    return movimientosDelDia
-      .filter(
-        (mov) =>
-          !rutaSeleccionada ||
-          mov.NombreRuta === rutaSeleccionada
-      )
-      .reduce((acc, mov) => acc + Number(mov.Monto || 0), 0);
-  }, [movimientosDelDia, rutaSeleccionada]);
-
-  const totalARecaudar = useMemo(() => {
-    return movimientosDelDia
-      .filter(
-        (mov) =>
-          !rutaSeleccionada ||
-          mov.NombreRuta === rutaSeleccionada
-      )
-      .reduce(
-        (acc, mov) =>
-          acc +
-          Number(
-            mov.TotalARecaudar ??
-              (Number(mov.Monto || 0) + Number(mov.MercanciaDevuelta || 0))
-          ),
-        0
-      );
-  }, [movimientosDelDia, rutaSeleccionada]);
 
   const totalMercanciaDevuelta = useMemo(() => {
     return movimientosDelDia
@@ -277,6 +255,25 @@ function RecaudoDiario() {
       .reduce((acc, mov) => acc + Number(mov.Monto || 0), 0);
   }, [movimientosDelDia, rutaSeleccionada]);
 
+  // El total recaudado y total a recaudar son el valor real completo incluyendo devoluciones (sin restas)
+  const totalRecaudo = useMemo(() => {
+    return (
+      totalRecaudoDigital +
+      totalConsignacionesCorresponsal +
+      totalRecaudoEfectivo +
+      totalMercanciaDevuelta
+    );
+  }, [
+    totalRecaudoDigital,
+    totalConsignacionesCorresponsal,
+    totalRecaudoEfectivo,
+    totalMercanciaDevuelta,
+  ]);
+
+  const totalARecaudar = useMemo(() => {
+    return totalRecaudo;
+  }, [totalRecaudo]);
+
   useEffect(() => {
     // Datos de ejemplo.
     // Reemplázalos por los datos reales de tu backend.
@@ -289,9 +286,9 @@ function RecaudoDiario() {
         NroFacturaAlpina: "FAC-1001",
         Placa: "ABC123",
         Planilla: "PL-001",
-        TotalARecaudar: 160000,
-        MercanciaDevuelta: 10000,
-        Monto: 150000,
+        TotalARecaudar: 330000,
+        MercanciaDevuelta: 25000,
+        Monto: 330000,
         Cedula_Usuario: "1001001001",
         TipoRecaudo: "DIGITAL",
       },
@@ -302,9 +299,9 @@ function RecaudoDiario() {
         NroFacturaAlpina: "FAC-1002",
         Placa: "ABC123",
         Planilla: "PL-001",
-        TotalARecaudar: 100000,
+        TotalARecaudar: 120000,
         MercanciaDevuelta: 15000,
-        Monto: 85000,
+        Monto: 120000,
         Cedula_Usuario: "1001001002",
         TipoRecaudo: "EFECTIVO",
       },
@@ -328,11 +325,37 @@ function RecaudoDiario() {
         NroFacturaAlpina: "FAC-1003",
         Placa: "XYZ789",
         Planilla: "PL-002",
-        TotalARecaudar: 240000,
+        TotalARecaudar: 220000,
         MercanciaDevuelta: 20000,
         Monto: 220000,
         Cedula_Usuario: "1001001003",
         TipoRecaudo: "DIGITAL",
+      },
+      {
+        FechaHoraMovimiento: "2026-09-30T14:00:00",
+        NombreRuta: "Ruta Sur",
+        TelefonoTransportista: "3109876543",
+        NroFacturaAlpina: "FAC-1006",
+        Placa: "XYZ789",
+        Planilla: "PL-002",
+        TotalARecaudar: 60000,
+        MercanciaDevuelta: 10000,
+        Monto: 60000,
+        Cedula_Usuario: "1001001006",
+        TipoRecaudo: "CORRESPONSAL",
+      },
+      {
+        FechaHoraMovimiento: "2026-09-30T15:30:00",
+        NombreRuta: "Ruta Sur",
+        TelefonoTransportista: "3109876543",
+        NroFacturaAlpina: "FAC-1007",
+        Placa: "XYZ789",
+        Planilla: "PL-002",
+        TotalARecaudar: 85000,
+        MercanciaDevuelta: 0,
+        Monto: 85000,
+        Cedula_Usuario: "1001001007",
+        TipoRecaudo: "EFECTIVO",
       },
       {
         FechaHoraMovimiento: "2026-09-29T11:00:00",
@@ -341,11 +364,24 @@ function RecaudoDiario() {
         NroFacturaAlpina: "FAC-1004",
         Placa: "DEF456",
         Planilla: "PL-003",
-        TotalARecaudar: 130000,
+        TotalARecaudar: 120000,
         MercanciaDevuelta: 10000,
         Monto: 120000,
         Cedula_Usuario: "1001001004",
         TipoRecaudo: "EFECTIVO",
+      },
+      {
+        FechaHoraMovimiento: "2026-09-29T16:00:00",
+        NombreRuta: "Ruta Centro",
+        TelefonoTransportista: "3155555555",
+        NroFacturaAlpina: "FAC-1008",
+        Placa: "DEF456",
+        Planilla: "PL-003",
+        TotalARecaudar: 180000,
+        MercanciaDevuelta: 15000,
+        Monto: 180000,
+        Cedula_Usuario: "1001001008",
+        TipoRecaudo: "DIGITAL",
       },
     ]);
   }, []);
@@ -360,7 +396,7 @@ function RecaudoDiario() {
         factura: item.facturaTexto,
         placa: item.placaTexto,
         planilla: item.planillaTexto,
-        totalARecaudar: item.totalARecaudar,
+        totalARecaudar: item.totalRecaudado,
         totalMercanciaDevuelta: item.totalMercanciaDevuelta,
         total: item.totalRecaudado,
         totalDigital: item.totalDigital,

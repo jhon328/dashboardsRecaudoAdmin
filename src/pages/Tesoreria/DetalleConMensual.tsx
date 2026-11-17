@@ -23,6 +23,8 @@ type TipoRecaudo = "DIGITAL" | "EFECTIVO" | "MICROCREDITO";
 interface RegistroDetalle {
   id?: number;
   recaudo: number;
+  totalARecaudar?: number;
+  mercanciaDevuelta?: number;
   codigo: string;
   fecha: string;
   hora: string;
@@ -45,6 +47,8 @@ interface RegistroDetalle {
 interface DatosDetalle {
   fecha: string;
   recaudo: number;
+  totalARecaudar?: number;
+  totalMercanciaDevuelta?: number;
   codigo: string;
   hora: string;
   clienteId: string;
@@ -176,13 +180,22 @@ function DetalleConMensual() {
     );
   }, [busquedaFiltro, datosDetalle.registros]);
 
+  const totalDevuelto = useMemo(
+    () =>
+      datosDetalle.registros.reduce(
+        (total, registro) => total + Number(registro.mercanciaDevuelta || 0),
+        0
+      ),
+    [datosDetalle.registros]
+  );
+
   const totalRegistros = useMemo(
     () =>
       datosDetalle.registros.reduce(
         (total, registro) => total + Number(registro.recaudo || 0),
         0
-      ),
-    [datosDetalle.registros]
+      ) + totalDevuelto,
+    [datosDetalle.registros, totalDevuelto]
   );
 
   const regresar = () => navigate(-1);
@@ -266,20 +279,55 @@ function DetalleConMensual() {
               </Box>
             ))}
 
-            <Box sx={{ p: 2.5, gridColumn: { md: "span 4" }, borderTop: "1px solid #f1f5f9" }}>
-              <Typography
-                sx={{
-                  fontSize: { xs: 24, sm: 28 },
-                  fontWeight: 800,
-                  color: "#000",
-                  lineHeight: 1.2,
-                }}
-              >
-                $ {formatoMiles(totalRegistros)}
-              </Typography>
-              <Typography sx={{ fontSize: 13, color: "#6b7280", mt: 0.5 }}>
-                Total de los pagos incluidos en este detalle
-              </Typography>
+            <Box
+              sx={{
+                p: 2.5,
+                gridColumn: { md: "span 4" },
+                borderTop: "1px solid #f1f5f9",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: 2,
+              }}
+            >
+              <Box>
+                <Typography sx={{ fontSize: 13, color: "#6b7280" }}>
+                  Total recaudado
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: { xs: 24, sm: 28 },
+                    fontWeight: 800,
+                    color: "#000",
+                    lineHeight: 1.2,
+                  }}
+                >
+                  $ {formatoMiles(totalRegistros)}
+                </Typography>
+                <Typography sx={{ fontSize: 13, color: "#6b7280", mt: 0.5 }}>
+                  Total de los pagos incluidos en este detalle
+                </Typography>
+              </Box>
+
+              <Box sx={{ display: "flex", gap: { xs: 2, sm: 4 }, flexWrap: "wrap", alignItems: "center" }}>
+                <Box>
+                  <Typography sx={{ fontSize: 12, color: "#6b7280", mb: 0.5 }}>
+                    Total a Recaudar
+                  </Typography>
+                  <Typography sx={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>
+                    $ {formatoMiles(totalRegistros)}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography sx={{ fontSize: 12, color: "#6b7280", mb: 0.5 }}>
+                    Mercancía Devuelta
+                  </Typography>
+                  <Typography sx={{ fontSize: 16, fontWeight: 700, color: "#dc2626" }}>
+                    $ {formatoMiles(totalDevuelto || datosDetalle.totalMercanciaDevuelta || 0)}
+                  </Typography>
+                </Box>
+              </Box>
             </Box>
           </Box>
         </Paper>

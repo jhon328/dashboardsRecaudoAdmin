@@ -47,9 +47,9 @@ interface RegistroConciliacion {
 const datosDemo: RegistroConciliacion[] = [
   {
     id: 1,
-    recaudo: 150000,
-    totalARecaudar: 160000,
-    mercanciaDevuelta: 10000,
+    recaudo: 330000,
+    totalARecaudar: 330000,
+    mercanciaDevuelta: 25000,
     codigo: "FAC-1001",
     fecha: "30/09/2026",
     hora: "08:15:00",
@@ -70,8 +70,8 @@ const datosDemo: RegistroConciliacion[] = [
   },
   {
     id: 2,
-    recaudo: 85000,
-    totalARecaudar: 100000,
+    recaudo: 120000,
+    totalARecaudar: 120000,
     mercanciaDevuelta: 15000,
     codigo: "FAC-1002",
     fecha: "30/09/2026",
@@ -95,7 +95,7 @@ const datosDemo: RegistroConciliacion[] = [
     id: 3,
     recaudo: 220000,
     totalARecaudar: 220000,
-    mercanciaDevuelta: 0,
+    mercanciaDevuelta: 20000,
     codigo: "FAC-1003",
     fecha: "30/09/2026",
     hora: "10:30:00",
@@ -117,7 +117,7 @@ const datosDemo: RegistroConciliacion[] = [
   {
     id: 4,
     recaudo: 120000,
-    totalARecaudar: 130000,
+    totalARecaudar: 120000,
     mercanciaDevuelta: 10000,
     codigo: "FAC-1004",
     fecha: "29/09/2026",
@@ -140,11 +140,11 @@ const datosDemo: RegistroConciliacion[] = [
   {
     id: 5,
     recaudo: 95000,
-    totalARecaudar: 100000,
-    mercanciaDevuelta: 5000,
+    totalARecaudar: 95000,
+    mercanciaDevuelta: 0,
     codigo: "FAC-1005",
-    fecha: "29/09/2026",
-    hora: "12:15:00",
+    fecha: "30/09/2026",
+    hora: "11:45:00",
     clienteId: "8100009826",
     cedula: "1001001005",
     nombres: "Pedro",
@@ -155,15 +155,15 @@ const datosDemo: RegistroConciliacion[] = [
     empresa: "SURTIALIMENTOS",
     codigoProducto: "PL-004",
     cantidad: 1,
-    placa: "DEF456",
-    transportista: "3155555555",
-    ruta: "Ruta Centro",
+    placa: "ABC123",
+    transportista: "3001234567",
+    ruta: "Ruta Norte",
     tipoRecaudo: "CORRESPONSAL",
   },
   {
     id: 6,
     recaudo: 60000,
-    totalARecaudar: 70000,
+    totalARecaudar: 60000,
     mercanciaDevuelta: 10000,
     codigo: "FAC-1006",
     fecha: "30/09/2026",
@@ -176,26 +176,49 @@ const datosDemo: RegistroConciliacion[] = [
     departamento: "Valle del Cauca",
     ciudad: "Cali",
     empresa: "SURTIALIMENTOS",
-    codigoProducto: "PL-001",
+    codigoProducto: "PL-002",
     cantidad: 1,
-    placa: "ABC123",
-    transportista: "3001234567",
-    ruta: "Ruta Norte",
+    placa: "XYZ789",
+    transportista: "3109876543",
+    ruta: "Ruta Sur",
     tipoRecaudo: "CORRESPONSAL",
   },
   {
     id: 7,
-    recaudo: 180000,
-    totalARecaudar: 200000,
-    mercanciaDevuelta: 20000,
+    recaudo: 85000,
+    totalARecaudar: 85000,
+    mercanciaDevuelta: 0,
     codigo: "FAC-1007",
-    fecha: "29/09/2026",
+    fecha: "30/09/2026",
     hora: "15:30:00",
     clienteId: "8100009828",
     cedula: "1001001007",
     nombres: "Marta",
     apellidos: "Gómez",
     comercio: "Super Tienda 29",
+    departamento: "Valle del Cauca",
+    ciudad: "Cali",
+    empresa: "SURTIALIMENTOS",
+    codigoProducto: "PL-002",
+    cantidad: 1,
+    placa: "XYZ789",
+    transportista: "3109876543",
+    ruta: "Ruta Sur",
+    tipoRecaudo: "EFECTIVO",
+  },
+  {
+    id: 8,
+    recaudo: 180000,
+    totalARecaudar: 180000,
+    mercanciaDevuelta: 15000,
+    codigo: "FAC-1008",
+    fecha: "29/09/2026",
+    hora: "16:00:00",
+    clienteId: "8100009829",
+    cedula: "1001001008",
+    nombres: "Roberto",
+    apellidos: "Díaz",
+    comercio: "Autoservicio Sur",
     departamento: "Valle del Cauca",
     ciudad: "Cali",
     empresa: "SURTIALIMENTOS",
@@ -275,13 +298,8 @@ function ConciliacionMensual() {
 
       const monto = Number(fila.recaudo || 0);
       const devuelto = Number(fila.mercanciaDevuelta || 0);
-      const aRecaudar = Number(
-        fila.totalARecaudar ?? (monto + devuelto)
-      );
 
-      acumulado[fila.fecha].recaudo += monto;
       acumulado[fila.fecha].totalMercanciaDevuelta += devuelto;
-      acumulado[fila.fecha].totalARecaudar += aRecaudar;
 
       if (fila.tipoRecaudo === "DIGITAL") {
         acumulado[fila.fecha].totalDigital += monto;
@@ -296,7 +314,24 @@ function ConciliacionMensual() {
       return acumulado;
     }, {});
 
-    return Object.values(agrupados).sort((a, b) =>
+    return Object.values(agrupados).map((item) => {
+      // El total recaudado y total a recaudar son el valor real completo incluyendo devoluciones (sin restas)
+      const valorTotal =
+        tipoPagoSeleccionado === "TODOS"
+          ? item.totalDigital +
+            item.consignacionesCorresponsal +
+            item.totalEfectivo +
+            item.totalMercanciaDevuelta
+          : item.totalDigital +
+            item.consignacionesCorresponsal +
+            item.totalEfectivo;
+
+      return {
+        ...item,
+        recaudo: valorTotal,
+        totalARecaudar: valorTotal,
+      };
+    }).sort((a, b) =>
       formatearFecha(b.fecha).localeCompare(formatearFecha(a.fecha))
     );
   }, [
@@ -310,9 +345,10 @@ function ConciliacionMensual() {
     [filas]
   );
 
+  // El campo total a recaudar debe ser igual que el total recaudado
   const totalMesARecaudar = useMemo(
-    () => filas.reduce((total, fila) => total + fila.totalARecaudar, 0),
-    [filas]
+    () => totalFiltrado,
+    [totalFiltrado]
   );
 
   const totalMesMercanciaDevuelta = useMemo(

@@ -35,6 +35,8 @@ interface Movimiento {
   Placa?: string;
   Planilla?: string;
   Monto?: number;
+  MercanciaDevuelta?: number;
+  TotalARecaudar?: number;
   Cedula_Usuario?: string;
   factura?: string;
   monto?: number;
@@ -47,7 +49,12 @@ interface DatosRecaudo {
   factura: string;
   placa: string;
   planilla: string;
+  totalARecaudar?: number;
+  totalMercanciaDevuelta?: number;
   total: number;
+  totalDigital?: number;
+  consignacionesCorresponsal?: number;
+  totalEfectivo?: number;
   movimientos: Movimiento[];
 }
 
@@ -130,6 +137,54 @@ const clientesDemo: Record<string, Cliente> = {
     Direccion: "Calle 8 # 12-15",
     Numero_Celular: "3034444444",
     nbCliente: "8100009825",
+  },
+
+  "1001001005": {
+    Nombre_Tienda: "Tienda El Progreso",
+    Nombres: "Pedro",
+    Primer_Apellido: "Ramírez",
+    "2do_Apellido_opcional": "",
+    Ubicacion_del_Negocio_Ciudad: "Cali",
+    Ubicacion_del_Negocio_Departamento: "Valle del Cauca",
+    Direccion: "Carrera 15 # 34-12",
+    Numero_Celular: "3155555555",
+    nbCliente: "8100009826",
+  },
+
+  "1001001006": {
+    Nombre_Tienda: "Granero Central",
+    Nombres: "Lucía",
+    Primer_Apellido: "Castro",
+    "2do_Apellido_opcional": "",
+    Ubicacion_del_Negocio_Ciudad: "Cali",
+    Ubicacion_del_Negocio_Departamento: "Valle del Cauca",
+    Direccion: "Calle 40 # 2-10",
+    Numero_Celular: "3166666666",
+    nbCliente: "8100009827",
+  },
+
+  "1001001007": {
+    Nombre_Tienda: "Super Tienda 29",
+    Nombres: "Marta",
+    Primer_Apellido: "Gómez",
+    "2do_Apellido_opcional": "",
+    Ubicacion_del_Negocio_Ciudad: "Cali",
+    Ubicacion_del_Negocio_Departamento: "Valle del Cauca",
+    Direccion: "Av 6N # 18-35",
+    Numero_Celular: "3177777777",
+    nbCliente: "8100009828",
+  },
+
+  "1001001008": {
+    Nombre_Tienda: "Autoservicio Sur",
+    Nombres: "Roberto",
+    Primer_Apellido: "Díaz",
+    "2do_Apellido_opcional": "",
+    Ubicacion_del_Negocio_Ciudad: "Cali",
+    Ubicacion_del_Negocio_Departamento: "Valle del Cauca",
+    Direccion: "Calle 13 # 65-20",
+    Numero_Celular: "3188888888",
+    nbCliente: "8100009829",
   },
 };
 
@@ -253,7 +308,12 @@ function DetalleRecaudo() {
         factura: datos.factura || "N/A",
         placa: datos.placa || "N/A",
         planilla: datos.planilla || "N/A",
+        totalARecaudar: Number(datos.totalARecaudar ?? datos.total ?? 0),
+        totalMercanciaDevuelta: Number(datos.totalMercanciaDevuelta || 0),
         total: Number(datos.total || 0),
+        totalDigital: Number(datos.totalDigital || 0),
+        consignacionesCorresponsal: Number(datos.consignacionesCorresponsal || 0),
+        totalEfectivo: Number(datos.totalEfectivo || 0),
         movimientos: datos.movimientos || [],
       };
     } catch {
@@ -384,28 +444,37 @@ function DetalleRecaudo() {
       movimientosDetalle,
     ]);
 
+  const totalDevueltoDetalle = useMemo(() => {
+    return datosRecaudo.movimientos.reduce(
+      (sum, mov) => sum + Number(mov.MercanciaDevuelta || 0),
+      0
+    );
+  }, [datosRecaudo.movimientos]);
 
-const pagosPorFactura: Record<string, PagoDetalle[]> = {
-  "FAC-1001": [
-    { medio: "Efectivo", monto: 50000 },
-    { medio: "Pago digital", monto: 100000 },
-  ],
-  "FAC-1002": [
-    { medio: "Microcredito", monto: 85000 },
-  ],
-  "FAC-1003": [
-    { medio: "Pago digital", monto: 220000 },
-  ],
-  "FAC-1004": [
-    { medio: "Pago digital", monto: 120000 },
-  ],
-};
+  const totalMontoDetalle = useMemo(() => {
+    const sumaPagos = movimientosDetalle.reduce(
+      (sum, mov) => sum + Number(mov.Monto || 0),
+      0
+    );
+    return sumaPagos + totalDevueltoDetalle;
+  }, [movimientosDetalle, totalDevueltoDetalle]);
 
-const pagos: PagoDetalle[] = pagoSeleccionado
-  ? pagosPorFactura[pagoSeleccionado.NroFacturaAlpina] || [
-      { medio: "Pago digital", monto: pagoSeleccionado.Monto },
-    ]
-  : [];
+  const pagosPorFactura: Record<string, PagoDetalle[]> = {
+    "FAC-1001": [{ medio: "Pago digital", monto: 330000 }],
+    "FAC-1002": [{ medio: "Efectivo", monto: 120000 }],
+    "FAC-1005": [{ medio: "Consignación Corresponsal", monto: 95000 }],
+    "FAC-1003": [{ medio: "Pago digital", monto: 220000 }],
+    "FAC-1006": [{ medio: "Consignación Corresponsal", monto: 60000 }],
+    "FAC-1007": [{ medio: "Efectivo", monto: 85000 }],
+    "FAC-1004": [{ medio: "Efectivo", monto: 120000 }],
+    "FAC-1008": [{ medio: "Pago digital", monto: 180000 }],
+  };
+
+  const pagos: PagoDetalle[] = pagoSeleccionado
+    ? pagosPorFactura[pagoSeleccionado.NroFacturaAlpina] || [
+        { medio: "Pago digital", monto: pagoSeleccionado.Monto },
+      ]
+    : [];
   const abrirDetallePago = (
     mov: MovimientoDetalle
   ) => {
@@ -619,7 +688,7 @@ const pagos: PagoDetalle[] = pagoSeleccionado
                   }}
                 >
                   $ {formatoMiles(
-                    datosRecaudo.total
+                    totalMontoDetalle || datosRecaudo.total
                   )}
                 </Typography>
 
@@ -630,7 +699,33 @@ const pagos: PagoDetalle[] = pagoSeleccionado
                     mt: 0.5,
                   }}
                 >
-                  Recaudo Pagos Digitales
+                  Total Recaudado
+                </Typography>
+
+                <Typography
+                  sx={{
+                    fontSize: 12,
+                    color: "#111827",
+                    fontWeight: 600,
+                    mt: 0.5,
+                  }}
+                >
+                  Total a Recaudar: $ {formatoMiles(
+                    totalMontoDetalle || datosRecaudo.total
+                  )}
+                </Typography>
+
+                <Typography
+                  sx={{
+                    fontSize: 12,
+                    color: "#dc2626",
+                    fontWeight: 600,
+                    mt: 0.25,
+                  }}
+                >
+                  Mercancía Devuelta: $ {formatoMiles(
+                    totalDevueltoDetalle || datosRecaudo.totalMercanciaDevuelta || 0
+                  )}
                 </Typography>
               </Box>
             </Box>
